@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PonceEscalier</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PonceEscalier">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ECEFEA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1311" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout : atelier — scène 3D de l'escalier à gauche (collante), carnet de chantier à droite ; une colonne sur téléphone */
+:root{
+  --bg:#ECEFEA; --panel:#FFFFFF; --sunk:#F4F6F2; --ink:#17201B; --muted:#56615A; --line:#D2D8D1;
+  --accent:#B86200; --accent-soft:#F6E3C8; --accent-ink:#FFFFFF; --ok:#2C7A4B; --ok-soft:#DCEFE2; --warn:#9B3B16; --warn-soft:#F8E4DA;
+  --g80:#B8352A; --g120:#2763C4; --g180:#2E8A55; --g240:#7A4BB5; --wall:#DADFD8; --floor:#C9CFC7; --tile:#E3E7E1;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F1311; --panel:#171D1A; --sunk:#121714; --ink:#E6EAE3; --muted:#98A39C; --line:#28312C;
+  --accent:#F2A63A; --accent-soft:#3A2A12; --accent-ink:#1B1205; --ok:#5DC48B; --ok-soft:#173023; --warn:#F08A5D; --warn-soft:#3A1E13;
+  --g80:#E5675B; --g120:#6E9DF0; --g180:#5FC08A; --g240:#B08BE8; --wall:#262D29; --floor:#1C221F; --tile:#222925; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0F1311; --panel:#171D1A; --sunk:#121714; --ink:#E6EAE3; --muted:#98A39C; --line:#28312C;
+  --accent:#F2A63A; --accent-soft:#3A2A12; --accent-ink:#1B1205; --ok:#5DC48B; --ok-soft:#173023; --warn:#F08A5D; --warn-soft:#3A1E13;
+  --g80:#E5675B; --g120:#6E9DF0; --g180:#5FC08A; --g240:#B08BE8; --wall:#262D29; --floor:#1C221F; --tile:#222925; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15.5px;line-height:1.55;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:14px 32px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;max-width:1440px;margin:0 auto 14px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand img{flex:none;width:58px;height:58px;border-radius:15px;box-shadow:0 0 0 1px var(--line),0 6px 16px -10px rgba(0,0,0,.5);background:#f6f5f2}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(22px,3vw,30px);line-height:1.05;margin:2px 0 0;letter-spacing:-.01em;text-wrap:balance}
+h1 span{color:var(--accent)}
+.meter{display:flex;align-items:center;gap:12px}
+.meter svg{flex:none}
+.meter strong{display:block;font-family:var(--f-display);font-size:22px;line-height:1;font-variant-numeric:tabular-nums}
+.meter span{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.app{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;max-width:1440px;margin:0 auto;align-items:start}
+@media (max-width:920px){.app{grid-template-columns:minmax(0,1fr)}}
+
+.stage{position:sticky;top:max(12px, env(safe-area-inset-top, 0px));height:min(calc(100vh - 110px),820px);min-height:420px;border-radius:var(--r);overflow:hidden;
+  background:radial-gradient(120% 90% at 70% 15%, var(--panel) 0%, var(--sunk) 60%, var(--bg) 100%);border:1px solid var(--line)}
+@media (max-width:920px){.stage{position:relative;top:0;height:54vh;min-height:320px;max-height:540px}}
+#gl{display:block;width:100%;height:100%;touch-action:none}
+.stage-top,.stage-bottom{position:absolute;left:12px;right:12px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
+.stage-top{top:12px;justify-content:space-between;align-items:flex-start}
+.stage-bottom{bottom:12px;justify-content:space-between;align-items:flex-end}
+.legend{display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(6px);border:1px solid var(--line);font-size:11.5px;color:var(--muted);pointer-events:auto}
+.legend div{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.legend b{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);font-weight:500;min-width:92px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.22)}
+@media (max-width:620px){.legend{display:none}}
+.stage-tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:6px 9px;border-radius:8px;background:var(--accent);color:var(--accent-ink);pointer-events:auto}
+.hint{font-size:12.5px;color:var(--ink);padding:7px 10px;border-radius:9px;background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);max-width:360px;pointer-events:auto}
+.views{display:flex;gap:6px;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end}
+.views button{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 11px;font-size:13px}
+.views button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.views #vFinal[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.fallback{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted)}
+
+.panel{display:flex;flex-direction:column;gap:14px;min-width:0}
+.phases{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.ph{border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:9px 9px 10px;text-align:left;display:flex;flex-direction:column;gap:6px;min-width:0}
+.ph b{font-family:var(--f-display);font-weight:700;font-size:14px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph small{font-family:var(--f-mono);font-size:10px;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+.ph .bar{height:4px;border-radius:4px;background:var(--line);overflow:hidden}
+.ph .bar span{display:block;height:100%;background:var(--ok);transition:width .4s}
+.ph.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+@media (max-width:520px){.ph{padding:7px 6px 8px}.ph b{font-size:12px}.ph small{font-size:9px}}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px 20px 18px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.card.enter{animation:rise .35s ease}
+@keyframes rise{from{transform:translateY(6px);opacity:.6}to{transform:none;opacity:1}}
+@media (max-width:460px){.card{padding:16px 14px}}
+.card-head{display:flex;flex-direction:column;gap:6px}
+.card h2{font-family:var(--f-display);font-weight:800;font-size:clamp(22px,2.4vw,28px);line-height:1.08;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:var(--sunk);white-space:nowrap}
+.chip.grit{font-family:var(--f-mono);font-weight:700;color:#fff;border-color:transparent}
+.chip.opt{border-style:dashed;color:var(--muted)}
+.chip.done{background:var(--ok-soft);color:var(--ok);border-color:transparent;font-weight:700}
+.how{margin:0;padding:0;list-style:none;counter-reset:h;display:flex;flex-direction:column;gap:10px}
+.how li{counter-increment:h;display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;max-width:68ch}
+.how li::before{content:counter(h);font-family:var(--f-mono);font-size:12px;font-weight:700;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.warn{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;padding:11px 13px;border-radius:11px;background:var(--warn-soft);color:var(--ink);font-size:14.5px}
+.warn svg{color:var(--warn);margin-top:2px}
+.warn b{color:var(--warn)}
+.sec{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.sec h3{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:500}
+
+.stages{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+@media (max-width:480px){.stages{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.st{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;line-height:1.2;color:var(--muted);text-align:center;opacity:.42;min-width:0}
+.st svg{width:100%;max-width:74px;height:auto;display:block;border-radius:8px;background:var(--tile)}
+.st.past{opacity:.85}
+.st.now{opacity:1;color:var(--ink);font-weight:700}
+.st.now svg{box-shadow:0 0 0 2px var(--accent)}
+.result-text{margin:0;font-size:14.5px;max-width:68ch}
+.result-text b{color:var(--accent)}
+
+.ck{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;padding:7px 6px;border-radius:9px;cursor:pointer;position:relative}
+.ck:hover{background:var(--sunk)}
+.ck input{position:absolute;opacity:0;width:1px;height:1px}
+.ck .box{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;transition:.15s;background:var(--panel)}
+.ck .box svg{opacity:0;transform:scale(.6);transition:.15s;color:var(--accent-ink)}
+.ck input:checked+.box{background:var(--ok);border-color:var(--ok)}
+.ck input:checked+.box svg{opacity:1;transform:none}
+.ck input:checked~.lbl{color:var(--muted);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--muted) 60%,transparent)}
+.ck input:focus-visible+.box{outline:2px solid var(--accent);outline-offset:2px}
+
+.tr-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.tr-count{font-family:var(--f-display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}
+.tr-count small{font-family:var(--f-body);font-weight:400;font-size:13px;color:var(--muted)}
+.tr-tools{display:flex;gap:6px;flex-wrap:wrap}
+.tr-tools button{border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:5px 9px;font-size:12.5px}
+.cells{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}
+@media (max-width:460px){.cells{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.cell{aspect-ratio:1/1;max-width:100%;border:1px solid var(--line);border-radius:8px;background:var(--sunk);font-family:var(--f-mono);font-size:12.5px;font-weight:700;display:grid;place-items:center;transition:transform .12s, background .2s}
+.cell:hover{transform:translateY(-1px);border-color:var(--accent)}
+.cell[aria-pressed="true"],.cell.ok{background:var(--ok);border-color:var(--ok);color:var(--accent-ink)}
+.cell.next{box-shadow:0 0 0 2px var(--accent)}
+.cell.here{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tr-note{font-size:12.5px;color:var(--muted);margin:0}
+.progress-line{height:6px;border-radius:6px;background:var(--line);overflow:hidden}
+.progress-line span{display:block;height:100%;background:var(--ok);transition:width .3s}
+
+.walk{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:12px}
+.walk-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center}
+.wnum{width:78px;height:78px;border-radius:16px;background:var(--ink);color:var(--bg);display:grid;place-content:center;text-align:center;line-height:1}
+.wnum small{display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.75;margin-bottom:3px}
+.wnum b{font-family:var(--f-display);font-size:36px;font-weight:800;font-variant-numeric:tabular-nums}
+.wmeta{display:flex;flex-direction:column;gap:6px;min-width:0}
+.wtag{font-size:13px;color:var(--muted)}
+.wcount{font-family:var(--f-display);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
+.subs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.sub{display:grid;grid-template-columns:minmax(0,1fr) 46px;gap:6px}
+.sub-sel{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;text-align:left;border:1px solid var(--line);background:var(--sunk);border-radius:12px;padding:10px 11px;align-items:start}
+.sub-sel b{display:block;font-weight:700;line-height:1.3}
+.sub-sel small{display:block;color:var(--muted);font-size:13px;line-height:1.45;margin-top:2px}
+.sub-sel .tool{display:inline-block;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.04em;margin-top:5px;padding:2px 7px;border-radius:6px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+.snum{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-family:var(--f-mono);font-size:12px;font-weight:700;background:var(--panel);border:1px solid var(--line)}
+.sub.on .sub-sel{border-color:var(--accent);background:var(--accent-soft)}
+.sub.on .snum{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.live{display:inline-block;font-family:var(--f-mono);font-size:10px;font-weight:500;color:var(--accent);letter-spacing:.04em;margin-left:6px}
+.sub.done .sub-sel b{color:var(--muted);text-decoration:line-through}
+.sub-ck{border:1px solid var(--line);border-radius:12px;background:var(--panel);display:grid;place-items:center;color:var(--muted)}
+.sub-ck[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--accent-ink)}
+.walk-nav{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+.wdone{padding:12px 14px;border-radius:12px;background:var(--ok-soft);color:var(--ink)}
+.wdone b{color:var(--ok)}
+.jump summary{cursor:pointer;font-size:13px;color:var(--muted);padding:4px 0}
+.jump .cells{margin-top:8px}
+
+.nav{display:flex;gap:10px;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:14px;flex-wrap:wrap}
+.btn{border-radius:11px;padding:11px 16px;font-weight:700;border:1px solid var(--line);background:var(--panel);display:inline-flex;align-items:center;gap:8px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);box-shadow:0 6px 18px -8px var(--accent)}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:transparent}
+.btn.okb{background:var(--ok);border-color:var(--ok);color:var(--accent-ink)}
+
+.all{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:4px 6px}
+.all summary{cursor:pointer;padding:10px 10px;font-family:var(--f-display);font-weight:700;font-size:16px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.all summary::-webkit-details-marker{display:none}
+.all summary span{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-weight:500}
+.list{list-style:none;margin:0;padding:0 0 6px}
+.list .ph-title{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:10px 10px 4px}
+.list button{width:100%;display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;padding:8px 10px;border-radius:9px;border:0;background:transparent}
+.list button:hover{background:var(--sunk)}
+.list button.cur{background:var(--accent-soft)}
+.dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--muted)}
+.dot.ok{background:var(--ok);border-color:var(--ok);color:var(--accent-ink)}
+.list .d{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);padding:0 4px}
+.foot button{border:0;background:transparent;color:var(--muted);text-decoration:underline;padding:4px}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.confirm button{border:1px solid var(--line);border-radius:8px;padding:5px 10px;text-decoration:none;background:var(--panel);color:var(--ink)}
+.confirm button.danger{background:var(--warn);color:#fff;border-color:var(--warn)}
+.finish{display:flex;flex-direction:column;gap:12px}
+.finish .big{font-family:var(--f-display);font-weight:800;font-size:40px;line-height:1;color:var(--ok)}
+
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <img src="icon-180.png" alt="Logo PonceEscalier" width="58" height="58">
+    <div>
+      <p class="eyebrow">2 escaliers quart tournant · 30 marches</p>
+      <h1>Ponce<span>Escalier</span></h1>
+    </div>
+  </div>
+  <div class="meter" aria-live="polite">
+    <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="24" r="20" fill="none" stroke="var(--line)" stroke-width="5"/>
+      <circle id="ring" cx="24" cy="24" r="20" fill="none" stroke="var(--ok)" stroke-width="5" stroke-linecap="round" stroke-dasharray="125.66" stroke-dashoffset="125.66" transform="rotate(-90 24 24)" style="transition:stroke-dashoffset .5s"/>
+    </svg>
+    <div><strong id="pct">0 %</strong><span id="pctLabel">0 / 15 étapes</span></div>
+  </div>
+</header>
+
+<main class="app">
+  <section class="stage" id="stage" aria-label="Vue 3D de l'escalier">
+    <canvas id="gl"></canvas>
+    <div class="stage-top">
+      <div class="legend" id="legend"></div>
+      <span class="stage-tag" id="stageTag">Étape 1</span>
+    </div>
+    <div class="stage-bottom">
+      <span class="hint" id="hint">Glissez pour tourner, molette ou pincement pour zoomer.</span>
+      <div class="views">
+        <button id="vFinal" aria-pressed="false">Résultat final</button>
+        <button id="vAll" aria-pressed="false">Vue d'ensemble</button>
+        <button id="vFocus" aria-pressed="true">Suivre</button>
+      </div>
+    </div>
+    <div class="fallback" id="glFallback" hidden>La 3D ne peut pas s'afficher sur cet appareil. Les étapes et le suivi des marches fonctionnent quand même.</div>
+  </section>
+
+  <section class="panel">
+    <nav class="phases" id="phases" aria-label="Phases du chantier"></nav>
+    <article class="card" id="card" aria-live="polite"></article>
+    <details class="all" id="allSteps">
+      <summary>Toutes les étapes <span id="allCount"></span></summary>
+      <ol class="list" id="list"></ol>
+    </details>
+    <div class="foot">
+      <span>Progression enregistrée sur cet appareil.</span>
+      <span id="resetZone"><button id="resetBtn">Tout remettre à zéro</button></span>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+const N = 30;
+const PHASES = [
+  {name:"Préparer", short:"Préparer"},
+  {name:"Décaper au grain 80", short:"Décaper"},
+  {name:"Affiner 120 puis 180", short:"Affiner"},
+  {name:"Contremarches et rambarde en blanc", short:"Peindre"},
+  {name:"Vitrifier les marches", short:"Vitrifier"}
+];
+const GRIT = {80:"var(--g80)",120:"var(--g120)",180:"var(--g180)",240:"var(--g240)"};
+
+const LEVELS = [
+  {c:"#6B3D1F", r:.25, name:"Vernis d'origine"},
+  {c:"#B5814F", r:.95, name:"Grain 80"},
+  {c:"#CB9C68", r:.9,  name:"Grain 120"},
+  {c:"#DDBB88", r:.85, name:"Grain 180"},
+  {c:"#D2A167", r:.4,  name:"1re couche"},
+  {c:"#C99155", r:.2,  name:"Vitrifié"}
+];
+const WHITE = [
+  {c:"#6B3D1F", r:.25, name:"Vernis d'origine", map:true},
+  {c:"#A07A55", r:.85, name:"Dépoli", map:true},
+  {c:"#E4E0D6", r:.92, name:"Sous-couche", map:false},
+  {c:"#F8F7F3", r:.32, name:"Laqué blanc", map:false}
+];
+const STAGES = [
+  {n:"Avant", t:0, r:0}, {n:"Grain 80", t:1, r:1}, {n:"Grain 120", t:2, r:1}, {n:"Grain 180", t:3, r:1},
+  {n:"Sous-couche", t:3, r:2}, {n:"Laque", t:3, r:3}, {n:"Vitrifié", t:5, r:3}
+];
+
+const STEPS = [
+ {id:"diag", phase:0, stage:0, title:"Identifier la finition actuelle", dur:"15 min", tool:"Cutter",
+  result:"Point de départ : vernis orangé, usé et blanchi par endroits, comme sur vos photos.",
+  how:["Grattez au cutter dans un coin caché d'une marche. Un copeau transparent indique un vernis ou un vitrificateur, une couleur opaque une peinture.",
+       "Si l'ongle laisse une trace grasse, c'est de la cire : retirez-la d'abord à la laine d'acier 000 et au white-spirit, sinon elle encrasse un disque en quelques secondes.",
+       "Maison construite avant 1949 et bois peint : faites un test plomb (kit vendu en magasin de bricolage) avant de poncer."],
+  warn:"Une peinture au plomb ne se ponce jamais à sec : la poussière est toxique.",
+  checks:["Type de finition identifié","Test plomb fait, ou pas nécessaire"]},
+ {id:"kit", phase:0, stage:0, title:"Rassembler le matériel", dur:"Courses", tool:"Liste",
+  result:"Rien ne change encore sur l'escalier.",
+  how:["Avec une ponceuse de 300 W, un disque grain 80 tient en général une à deux marches sur un vieux vernis. Comptez large.",
+       "Vérifiez que les trous des disques correspondent à ceux du patin de la ponceuse avant d'acheter un lot."],
+  checks:["Ponceuse excentrique 125 mm et son adaptateur d'aspiration","Ponceuse delta ou multitool avec patins triangulaires","Disques 125 mm : environ 40 en grain 80, 35 en 120, 25 en 180","Triangles delta en 80, 120 et 180, éponges abrasives, feuilles 240","Grattoir carbure, chasse-clou, cale à poncer en mousse","Aspirateur eau et poussière, masque FFP2, lunettes, casque","Lessive (type St Marc) et éponge pour dégraisser la rambarde","Sous-couche bois (environ 1 L) et laque blanche satinée boiseries (environ 2 L)","Rouleau laqueur 10 cm, pinceau à rechampir, ruban de masquage précision","Vitrificateur spécial escalier (environ 2 L) et rouleau microfibre","Mastic bois teinté pour les marches, enduit bois pour les contremarches"]},
+ {id:"prep", phase:0, stage:0, title:"Dégager et protéger l'escalier", dur:"1 h à 1 h 30", tool:"Chasse-clou",
+  result:"Escalier vide, murs protégés : prêt à poncer.",
+  how:["Retirez tapis, nez de marche rapportés, agrafes et clous de moquette.",
+       "Enfoncez chaque tête de pointe 2 mm sous la surface avec le chasse-clou. Une tête de clou déchire un disque instantanément.",
+       "Masquez plinthes et murs sur 5 cm au ruban, bâchez le bas de l'escalier et fermez les portes des pièces voisines."],
+  checks:["Clous et agrafes traités sur les 30 marches","Murs et plinthes masqués","Pièces voisines fermées, fenêtre ouverte"]},
+ {id:"set", phase:0, stage:0, title:"Régler la ponceuse", dur:"10 min", tool:"Ponceuse excentrique", grit:80,
+  result:"Machine prête : aspiration branchée, disque 80 en place.",
+  how:["Branchez l'aspirateur sur l'adaptateur plutôt que d'utiliser le sac : moins de poussière et un disque qui s'encrasse moins vite.",
+       "Posez le disque grain 80 en alignant ses trous sur ceux du patin.",
+       "Molette de vitesse : 5 à 6 pour décaper au grain 80, 4 à 5 pour le 120 et le 180.",
+       "Faites un essai sur une chute de bois pour sentir la machine."],
+  checks:["Aspirateur branché sur la ponceuse","Disque grain 80 en place, trous alignés","Essai fait"]},
+
+ {id:"strip", phase:1, stage:1, title:"Décapant si la couche résiste", dur:"½ journée + 24 h", tool:"Décapant gel, grattoir", optional:true,
+  result:"Vernis ramolli et raclé : bois brut par endroits, à finir au 80.",
+  how:["Sur vos photos, le vernis est déjà usé et blanchi : il devrait partir au grain 80 sans décapant.",
+       "Pour en être sûr, poncez une minute sur la marche 30. Si le disque se couvre de vernis fondu qui fait des boulettes, passez au décapant gel.",
+       "Décapant au pinceau sur trois ou quatre marches à la fois, temps de pose du pot, puis raclage au grattoir dans le sens du fil. Séchage 24 h."],
+  checks:["Test d'une minute fait sur la marche 30","Décapage fait, ou pas nécessaire"]},
+ {id:"w80", phase:1, stage:1, title:"Passe 1 : grain 80, marche par marche", dur:"15 à 20 min par marche", tool:"Excentrique + delta", grit:80,
+  result:"<b>Marche :</b> bois mat et clair, plus aucune zone brillante. <b>Contremarche :</b> terne et dépolie, prête pour la sous-couche.",
+  how:["Commencez par la marche 30 et descendez jusqu'à la 1 : vous ne marchez jamais sur une marche déjà poncée et la poussière descend devant vous.",
+       "Pour chaque marche, faites les 4 gestes dans l'ordre. Touchez un geste pour le voir animé dans la 3D, puis cochez-le.",
+       "Les contremarches seront peintes : un simple dépolissage au 120 suffit. Gardez un disque 120 à portée de main, le patin auto-agrippant permet de changer en 5 secondes."],
+  warn:"Ne restez pas immobile au même endroit avec la ponceuse : vous creusez une cuvette qui se verra sous le vitrificateur.",
+  walk:{key:"w80", level:1, subs:[
+    {t:"Plateau au grain 80", d:"Ponceuse posée à plat, vitesse 5 à 6, bandes qui se chevauchent dans le sens du fil. Arrêtez-vous à 1 ou 2 cm des bords.", tool:"Excentrique · 80", anim:"tread"},
+    {t:"Angles et bords à la delta", d:"Fond de la marche contre la contremarche, côté mur, côté rambarde, et la pointe étroite des marches balancées.", tool:"Delta · 80", anim:"corner"},
+    {t:"Nez de marche à la main", d:"Abrasif 80 plié sur une cale en mousse, en suivant l'arrondi d'un bout à l'autre.", tool:"Cale · 80", anim:"nose"},
+    {t:"Contremarche : dépolir au 120", d:"Elle sera peinte en blanc : il suffit d'enlever le brillant pour que la sous-couche accroche. Inutile d'aller jusqu'au bois.", tool:"Excentrique · 120", anim:"riser"}
+  ]}},
+ {id:"rail", phase:1, stage:1, title:"Rambarde : dépolir pour la peinture", dur:"3 h", tool:"Éponge abrasive, delta", grit:120,
+  result:"<b>Rambarde :</b> vernis dépoli, mat au toucher, propre et dégraissé. Elle est prête pour la sous-couche blanche.",
+  how:["La rambarde sera peinte en blanc : inutile de la décaper jusqu'au bois. Un dépolissage au 120 qui supprime tout le brillant suffit.",
+       "Balustres carrés : éponge abrasive ou cale sur chaque face. Poteaux : excentrique sur les faces planes, delta dans les angles.",
+       "Main courante : en longueur, à l'éponge abrasive.",
+       "Lessivez ensuite toute la rambarde et rincez : la peinture n'accroche pas sur la graisse des mains."],
+  checks:["Main courante dépolie","Balustres dépolis","Poteaux dépolis","Rambarde lessivée, rincée et sèche"], railLevel:1, railChecks:[0,1,2,3], focus:"rail"},
+ {id:"check80", phase:1, stage:1, title:"Contrôler et reboucher", dur:"1 h + séchage", tool:"Lampe, mastic, enduit",
+  result:"Plus aucune zone brillante, trous et fentes rebouchés.",
+  how:["Aspirez tout l'escalier, puis posez une lampe à plat sur chaque marche : c'est la lumière rasante.",
+       "Les zones qui brillent encore sont du vernis restant. Repassez-les au 80.",
+       "Rebouchez les trous des marches au mastic bois teinté, et ceux des contremarches à l'enduit bois, qui sera peint."],
+  checks:["Plus aucune zone brillante en lumière rasante","Trous des marches rebouchés","Trous des contremarches rebouchés","Mastic et enduit secs"]},
+
+ {id:"w120", phase:2, stage:2, title:"Passe 2 : grain 120, marche par marche", dur:"6 à 8 min par marche", tool:"Excentrique + delta", grit:120,
+  result:"<b>Marche :</b> bois plus clair et régulier. Les rayures circulaires du 80 ont disparu.",
+  how:["Disques 120 sur la ponceuse et sur la delta. De nouveau de la marche 30 vers la 1.",
+       "Arasez le mastic à cette passe.",
+       "Contrôle : en lumière rasante, plus aucun petit cercle ne doit se voir."],
+  warn:"Ne sautez pas du 80 au 180 : le 180 n'efface pas les rayures du 80, et elles réapparaissent sous le vitrificateur.",
+  walk:{key:"w120", level:2, subs:[
+    {t:"Plateau au grain 120", d:"Vitesse 4 à 5, mêmes bandes qui se chevauchent. Arasez le mastic au passage.", tool:"Excentrique · 120", anim:"tread"},
+    {t:"Angles et bords à la delta", d:"Fond de marche, côtés et pointe des balancées au 120.", tool:"Delta · 120", anim:"corner"},
+    {t:"Nez de marche à la main", d:"Cale en mousse et abrasif 120, en suivant l'arrondi.", tool:"Cale · 120", anim:"nose"}
+  ]}},
+ {id:"w180", phase:2, stage:3, title:"Passe 3 : grain 180, marche par marche", dur:"4 à 5 min par marche", tool:"Excentrique + delta", grit:180,
+  result:"<b>Marche :</b> bois doux au toucher, teinte claire et uniforme. C'est la couleur du bois nu avant vitrification.",
+  how:["Passe rapide de finition, vitesse 4, pression minimale.",
+       "Le bois doit être doux sous la main, sans fibres relevées."],
+  walk:{key:"w180", level:3, subs:[
+    {t:"Plateau au grain 180", d:"Passe légère sur toute la surface.", tool:"Excentrique · 180", anim:"tread"},
+    {t:"Bords et nez de marche au 180", d:"Delta dans les angles, puis la cale en mousse sur l'arrondi du nez.", tool:"Delta + cale · 180", anim:"corner"}
+  ]}},
+ {id:"dust", phase:2, stage:3, title:"Dépoussiérage complet", dur:"1 h 30", tool:"Aspirateur, microfibre",
+  result:"Aucune poussière au passage de la main : la peinture peut commencer.",
+  how:["Aspirez marches, contremarches, rambarde, plinthes et murs, du haut vers le bas.",
+       "Attendez une heure que la poussière en suspension retombe, puis aspirez de nouveau.",
+       "Passez un chiffon microfibre à peine humide et bien essoré, puis laissez sécher."],
+  checks:["Premier aspirage","Second aspirage après 1 h","Microfibre passée, tout est sec"]},
+
+ {id:"pc1", phase:3, stage:4, title:"Sous-couche blanche", dur:"½ journée + séchage", tool:"Pinceau à rechampir, rouleau laqueur",
+  result:"<b>Contremarches et rambarde :</b> blanc mat légèrement cassé, le veinage du bois ne se voit plus. Les marches restent en bois nu.",
+  how:["On peint avant de vitrifier : une coulure sur le bois nu se rattrape au 180, alors qu'elle se verrait sur un vitrificateur.",
+       "Masquez le bord des marches au ruban de précision, au ras de chaque contremarche.",
+       "Pinceau à rechampir dans les angles, puis rouleau laqueur sur le plat. Rambarde de haut en bas : main courante, balustres, poteaux.",
+       "Après séchage, égrenez légèrement au 240 et dépoussiérez."],
+  warn:"Une goutte de peinture sur une marche poncée : laissez-la sécher, puis poncez-la au 180 avant de vitrifier.",
+  tracker:{key:"pc1", part:"risers", label:"contremarches en sous-couche"},
+  checks:["Rambarde en sous-couche","Égrenage 240 fait"], railLevel:2, railChecks:[0], focus:"rail"},
+ {id:"pc2", phase:3, stage:5, title:"Laque blanche, 2 couches", dur:"2 × ½ journée", tool:"Rouleau laqueur, pinceau",
+  result:"<b>Contremarches et rambarde :</b> blanc satiné uniforme, bord net au ras des marches.",
+  how:["Laque satinée : elle se nettoie facilement et marque moins que la brillante.",
+       "Couche fine, lissée dans la longueur sans revenir dessus quand elle commence à tirer.",
+       "Deuxième couche après le temps de recouvrement du pot, avec un égrenage 240 entre les deux.",
+       "Retirez le ruban pendant que la dernière couche est encore un peu fraîche : le bord reste net."],
+  tracker:{key:"pc2", part:"risers", label:"contremarches laquées (2 couches)"},
+  checks:["Rambarde : 1re couche de laque","Rambarde : 2e couche de laque","Ruban retiré"], railLevel:3, railChecks:[1], focus:"rail"},
+
+ {id:"v1", phase:4, stage:6, title:"Vitrificateur : première couche", dur:"2 à 3 h + séchage", tool:"Rouleau microfibre",
+  result:"<b>Marche :</b> le bois fonce légèrement et prend une teinte miel. Les contremarches blanches restent nettes.",
+  how:["Contrôlez chaque marche : retouchez au 180 toute trace de peinture, puis dépoussiérez.",
+       "Masquez le pied des contremarches blanches au ruban, une fois la laque bien sèche.",
+       "Vitrificateur « spécial escalier » au rouleau microfibre, dans le sens du fil, en commençant par le haut.",
+       "Besoin de passer ? Vitrifiez une marche sur deux aujourd'hui (bouton « Une sur deux ») et les autres le lendemain."],
+  tracker:{key:"v1", part:"treads", label:"marches vitrifiées", alternate:true}},
+ {id:"v2", phase:4, stage:6, title:"Égrenage 240 et couches de finition", dur:"½ journée + séchage", tool:"Main, rouleau", grit:240,
+  result:"<b>Résultat final :</b> marches en bois miel satiné et résistant, contremarches et rambarde blanches.",
+  how:["Égrenez légèrement à la main au grain 240 pour casser les fibres relevées, puis dépoussiérez.",
+       "Passez la deuxième couche, et une troisième si le fabricant la conseille : les marches sont la zone qui s'use le plus.",
+       "Marchez en chaussettes les premiers jours. Attendez la dureté complète indiquée sur le pot avant de remettre un tapis."],
+  tracker:{key:"v2", part:"treads", label:"marches en couche de finition", alternate:true}}
+];
+const WALKS = STEPS.filter(s=>s.walk);
+
+/* ---------- état ---------- */
+const STORE = "ponceescalier-v2";
+const blank = () => ({cur:0, done:{}, checks:{}, marks:{}, walk:{}, pos:{}, sub:{}, view:"focus"});
+let S = blank(), preview = false;
+try{ const raw = localStorage.getItem(STORE); if(raw) S = Object.assign(blank(), JSON.parse(raw)); }catch(e){}
+if(!(S.cur>=0 && S.cur<=STEPS.length)) S.cur = 0;
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} }
+function marks(k){ if(!Array.isArray(S.marks[k]) || S.marks[k].length!==N) S.marks[k] = Array(N).fill(false); return S.marks[k]; }
+function checks(id,n){ if(!Array.isArray(S.checks[id]) || S.checks[id].length!==n) S.checks[id] = Array(n).fill(false); return S.checks[id]; }
+const has = (k,i) => !!(S.marks[k] && S.marks[k][i]);
+function nextIndex(k){ const m = marks(k); for(let i=N-1;i>=0;i--) if(!m[i]) return i; return -1; }
+
+function walkArr(s){
+  const k = s.walk.key, n = s.walk.subs.length;
+  if(!Array.isArray(S.walk[k]) || S.walk[k].length!==N) S.walk[k] = Array.from({length:N}, ()=>Array(n).fill(false));
+  S.walk[k].forEach((a,i)=>{ if(!Array.isArray(a) || a.length!==n) S.walk[k][i] = Array(n).fill(false); });
+  return S.walk[k];
+}
+const walkDone = (s,i) => walkArr(s)[i].every(Boolean);
+const walkCount = s => walkArr(s).filter(a=>a.every(Boolean)).length;
+function walkNext(s, from){ for(let i=from;i>=0;i--) if(!walkDone(s,i)) return i; for(let i=N-1;i>from;i--) if(!walkDone(s,i)) return i; return -1; }
+function curPos(s){ const k = s.walk.key; let p = S.pos[k]; if(!(p>=0 && p<N)){ p = walkNext(s, N-1); if(p<0) p = 0; S.pos[k] = p; } return p; }
+function activeSub(s){ const k = s.walk.key, a = walkArr(s)[curPos(s)]; let v = S.sub[k]; if(!(v>=0 && v<a.length)){ v = a.findIndex(x=>!x); if(v<0) v = 0; S.sub[k] = v; } return v; }
+function subDone(key,i,j){ const a = S.walk[key]; return !!(a && a[i] && a[i][j]); }
+
+function plateauLevel(i){ if(has("v2",i)) return 5; if(has("v1",i)) return 4; let lv = 0; WALKS.forEach(s=>{ if(subDone(s.walk.key,i,0)) lv = Math.max(lv, s.walk.level); }); return lv; }
+function edgeLevel(i){ if(has("v2",i)) return 5; if(has("v1",i)) return 4; let lv = 0;
+  WALKS.forEach(s=>{ const idx = s.walk.subs.map((x,j)=>(x.anim==="corner"||x.anim==="nose")?j:-1).filter(j=>j>=0);
+    if(idx.length && idx.every(j=>subDone(s.walk.key,i,j))) lv = Math.max(lv, s.walk.level); }); return lv; }
+const RISER_SUB = STEPS.find(s=>s.id==="w80").walk.subs.findIndex(x=>x.anim==="riser");
+function riserLevel(i){ if(has("pc2",i)) return 3; if(has("pc1",i)) return 2; return subDone("w80",i,RISER_SUB) ? 1 : 0; }
+function railLevel(){ let lv = 0; STEPS.forEach(s=>{ if(!s.railLevel) return; const c = S.checks[s.id]; if(S.done[s.id] || (c && s.railChecks.every(j=>c[j]))) lv = Math.max(lv, s.railLevel); }); return lv; }
+function stepCount(s){ if(s.walk) return walkCount(s); if(s.tracker) return marks(s.tracker.key).filter(Boolean).length; return null; }
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const CHECK_SVG = '<svg width="16" height="16" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const WARN_SVG = '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l9 16H1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 8v4.5M10 15.2v.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+$("#legend").innerHTML =
+  `<div><b>Marches</b>${[0,1,2,3,5].map(k=>`<span><i style="background:${LEVELS[k].c}"></i>${LEVELS[k].name}</span>`).join("")}</div>` +
+  `<div><b>Blanc</b>${[1,2,3].map(k=>`<span><i style="background:${WHITE[k].c}"></i>${WHITE[k].name}</span>`).join("")}</div>`;
+
+function miniStep(t, r){
+  const tc = LEVELS[t].c, rc = WHITE[r].c, gloss = t>=4 ? .5 : 0;
+  return `<svg viewBox="0 0 74 62" aria-hidden="true">
+    <rect x="12" y="4" width="58" height="22" fill="${rc}" stroke="rgba(0,0,0,.22)"/>
+    <rect x="12" y="34" width="58" height="26" fill="${rc}" stroke="rgba(0,0,0,.22)"/>
+    <rect x="8" y="25" width="64" height="9" rx="4" fill="${tc}" stroke="rgba(0,0,0,.28)"/>
+    <path d="M14 28.5h52M20 31h40" stroke="rgba(60,30,10,.25)" stroke-width="1"/>
+    ${gloss?`<path d="M18 27h30" stroke="rgba(255,255,255,${gloss})" stroke-width="1.6" stroke-linecap="round"/>`:""}
+    <rect x="2" y="0" width="6" height="62" fill="${rc}" stroke="rgba(0,0,0,.25)"/>
+  </svg>`;
+}
+function resultHTML(s){
+  const k = s.stage;
+  return `<div class="sec"><h3>Résultat attendu sur la marche</h3>
+    <div class="stages">${STAGES.map((g,i)=>`<div class="st ${i<k?"past":""} ${i===k?"now":""}">${miniStep(g.t,g.r)}<span>${esc(g.n)}</span></div>`).join("")}</div>
+    <p class="result-text">${s.result}</p></div>`;
+}
+
+function phaseStats(p){ const st = STEPS.filter(s=>s.phase===p); return {n:st.length, d:st.filter(s=>S.done[s.id]).length}; }
+function renderTop(){
+  const d = STEPS.filter(s=>S.done[s.id]).length;
+  $("#pct").textContent = Math.round(d/STEPS.length*100) + " %";
+  $("#pctLabel").textContent = d + " / " + STEPS.length + " étapes";
+  $("#ring").setAttribute("stroke-dashoffset", (125.66*(1-d/STEPS.length)).toFixed(2));
+  $("#allCount").textContent = d + " / " + STEPS.length;
+}
+function renderPhases(){
+  const curPhase = S.cur < STEPS.length ? STEPS[S.cur].phase : -1;
+  $("#phases").innerHTML = PHASES.map((p,i)=>{ const s = phaseStats(i);
+    return `<button class="ph ${i===curPhase?"on":""}" data-phase="${i}" aria-label="Phase ${i+1} : ${esc(p.name)}, ${s.d} sur ${s.n} étapes faites">
+      <small>${i+1} · ${s.d}/${s.n}</small><b>${esc(p.short)}</b><span class="bar"><span style="width:${s.n? s.d/s.n*100:0}%"></span></span></button>`; }).join("");
+}
+function renderList(){
+  let html = "", lastPhase = -1;
+  STEPS.forEach((s,i)=>{
+    if(s.phase!==lastPhase){ html += `<li class="ph-title">Phase ${s.phase+1} · ${esc(PHASES[s.phase].name)}</li>`; lastPhase = s.phase; }
+    const c = stepCount(s), extra = c===null ? s.dur : c + "/30";
+    html += `<li><button data-go="${i}" class="${i===S.cur?"cur":""}"><span class="dot ${S.done[s.id]?"ok":""}">${S.done[s.id]?CHECK_SVG:(i+1)}</span><span>${esc(s.title)}${s.optional?' <span class="d">(si besoin)</span>':""}</span><span class="d">${esc(extra)}</span></button></li>`;
+  });
+  $("#list").innerHTML = html;
+}
+
+function trackerHTML(s){
+  const t = s.tracker, m = marks(t.key), c = m.filter(Boolean).length, nx = nextIndex(t.key);
+  let cells = "";
+  for(let i=N-1;i>=0;i--) cells += `<button class="cell ${i===nx?"next":""}" data-cell="${i}" aria-pressed="${m[i]}" aria-label="${t.part==="risers"?"Contremarche":"Marche"} ${i+1}${m[i]?", faite":""}">${i+1}</button>`;
+  return `<div class="sec">
+    <div class="tr-head">
+      <div><h3>Suivi ${t.part==="risers"?"contremarche par contremarche":"marche par marche"}</h3><span class="tr-count">${c}<small> / 30 ${esc(t.label)}</small></span></div>
+      <div class="tr-tools">${t.alternate?'<button data-bulk="alt">Une sur deux</button>':""}<button data-bulk="all">Tout cocher</button><button data-bulk="none">Effacer</button></div>
+    </div>
+    <div class="progress-line"><span style="width:${c/30*100}%"></span></div>
+    <div class="cells">${cells}</div>
+    <p class="tr-note">Marches 1 à 15 : escalier du RDC au 1er. Marches 16 à 30 : du 1er aux combles. Touchez ${t.part==="risers"?"une contremarche":"une marche"} dans la 3D pour la cocher.</p>
+  </div>`;
+}
+
+function walkHTML(s){
+  const i = curPos(s), a = walkArr(s)[i], act = activeSub(s), cnt = walkCount(s), allDone = cnt === N;
+  const where = (i<15 ? "Escalier du bas (RDC → 1er)" : "Escalier du haut (1er → combles)") + " · " + (Scene && Scene.isWinder(i) ? "marche balancée" : "marche droite");
+  const subs = s.walk.subs.map((x,j)=>`<li class="sub ${j===act?"on":""} ${a[j]?"done":""}">
+      <button class="sub-sel" data-sub="${j}"><span class="snum">${j+1}</span><span><b>${esc(x.t)}</b>${j===act?'<span class="live">▶ animé dans la 3D</span>':""}<small>${esc(x.d)}</small><span class="tool">${esc(x.tool)}</span></span></button>
+      <button class="sub-ck" data-subck="${j}" aria-pressed="${a[j]}" aria-label="Geste ${j+1} ${a[j]?"fait":"à faire"}">${CHECK_SVG}</button></li>`).join("");
+  let cells = "";
+  for(let k=N-1;k>=0;k--) cells += `<button class="cell ${walkDone(s,k)?"ok":""} ${k===i?"here":""}" data-wgo="${k}" aria-label="Aller à la marche ${k+1}">${k+1}</button>`;
+  const nxt = (()=>{ for(let k=i-1;k>=0;k--) if(!walkDone(s,k)) return k; for(let k=N-1;k>i;k--) if(!walkDone(s,k)) return k; return -1; })();
+  return `<div class="walk">
+    ${allDone ? `<div class="wdone"><b>Les 30 marches sont faites pour cette passe.</b> Validez l'étape en bas pour passer à la suite.</div>` : ""}
+    <div class="walk-head">
+      <div class="wnum"><small>Marche</small><b>${i+1}</b></div>
+      <div class="wmeta"><span class="wtag">${esc(where)}</span><span class="wcount">${cnt} / 30 marches faites</span><div class="progress-line"><span style="width:${cnt/30*100}%"></span></div></div>
+    </div>
+    <ol class="subs">${subs}</ol>
+    <div class="walk-nav">
+      <button class="btn ghost" data-wprev ${i>=N-1?"disabled":""}>↑ Marche ${Math.min(N,i+2)}</button>
+      <button class="btn ${a.every(Boolean)?"okb":"primary"}" data-wnext>${nxt<0 ? "Marche "+(i+1)+" terminée ✓" : "Marche "+(i+1)+" terminée → marche "+(nxt+1)}</button>
+    </div>
+    <details class="jump"><summary>Aller directement à une marche</summary><div class="cells">${cells}</div></details>
+  </div>`;
+}
+
+let lastCardKey = null;
+function renderCard(){
+  const card = $("#card");
+  if(lastCardKey !== S.cur){ card.classList.remove("enter"); void card.offsetWidth; card.classList.add("enter"); lastCardKey = S.cur; }
+  if(S.cur >= STEPS.length){
+    const all = STEPS.every(s=>S.done[s.id]);
+    card.innerHTML = `<div class="finish">
+      <p class="eyebrow">Chantier</p>
+      <div class="big">${all?"Escalier terminé":"Presque fini"}</div>
+      ${resultHTML({stage:6, result:all?"Marches en bois miel vitrifié, contremarches et rambarde blanches. Laissez durcir le vitrificateur le temps indiqué sur le pot avant de remettre un tapis.":"Il reste des étapes non validées : ouvrez la liste ci-dessous pour les retrouver."})}
+      <div class="nav"><button class="btn ghost" data-act="prev">← Étape précédente</button><button class="btn primary" data-go="0">Revoir depuis le début</button></div></div>`;
+    return;
+  }
+  const s = STEPS[S.cur], done = !!S.done[s.id];
+  let meta = `<span class="chip">${esc(s.tool)}</span><span class="chip">${esc(s.dur)}</span>`;
+  if(s.grit) meta = `<span class="chip grit" style="background:${GRIT[s.grit]}">Grain ${s.grit}</span>` + meta;
+  if(s.optional) meta += `<span class="chip opt">Seulement si besoin</span>`;
+  if(done) meta += `<span class="chip done">${CHECK_SVG} Terminée</span>`;
+  let ck = "";
+  if(s.checks){ const arr = checks(s.id, s.checks.length);
+    ck = `<div class="sec"><h3>${s.id==="kit"?"Liste de courses":"À cocher"}</h3><div>` + s.checks.map((c,i)=>`<label class="ck" for="ck-${s.id}-${i}"><input type="checkbox" id="ck-${s.id}-${i}" data-ck="${i}" ${arr[i]?"checked":""}><span class="box">${CHECK_SVG}</span><span class="lbl">${esc(c)}</span></label>`).join("") + `</div></div>`;
+  }
+  const isLast = S.cur === STEPS.length-1;
+  card.innerHTML = `
+    <div class="card-head">
+      <p class="eyebrow">Phase ${s.phase+1} · ${esc(PHASES[s.phase].name)} — étape ${S.cur+1} sur ${STEPS.length}</p>
+      <h2>${esc(s.title)}</h2>
+      <div class="meta">${meta}</div>
+    </div>
+    <ol class="how">${s.how.map(h=>`<li><span>${esc(h)}</span></li>`).join("")}</ol>
+    ${s.warn?`<div class="warn">${WARN_SVG}<div><b>Attention.</b> ${esc(s.warn)}</div></div>`:""}
+    ${s.walk?walkHTML(s):""}
+    ${resultHTML(s)}
+    ${s.tracker?trackerHTML(s):""}
+    ${ck}
+    <div class="nav">
+      <button class="btn ghost" data-act="prev" ${S.cur===0?"disabled":""}>← Étape précédente</button>
+      <button class="btn primary" data-act="next">${done?(isLast?"Voir le bilan →":"Étape suivante →"):(isLast?"Valider et terminer ✓":"Valider l'étape →")}</button>
+    </div>`;
+}
+
+function renderAll(){ renderTop(); renderPhases(); renderCard(); renderList(); updateStageText(); if(Scene) Scene.refresh(); save(); }
+
+function updateStageText(){
+  const s = STEPS[S.cur];
+  $("#stageTag").textContent = preview ? "Résultat final" : s ? "Étape " + (S.cur+1) + " · " + PHASES[s.phase].short : "Terminé";
+  let h = "Glissez pour tourner, molette ou pincement pour zoomer.";
+  if(preview) h = "Aperçu du résultat : marches vitrifiées, contremarches et rambarde laquées en blanc.";
+  else if(s && s.walk){ const i = curPos(s), j = activeSub(s); h = walkCount(s)===N ? "Passe terminée sur les 30 marches." : `Marche ${i+1}, geste ${j+1} : ${s.walk.subs[j].t.toLowerCase()}. Touchez une autre marche dans la 3D pour y aller.`; }
+  else if(s && s.tracker){ const nx = nextIndex(s.tracker.key); const w = s.tracker.part==="risers" ? "contremarche" : "marche";
+    h = nx<0 ? "Tout est coché pour cette étape." : `Prochaine : ${w} ${nx+1}. Touchez une ${w} dans la 3D pour la cocher.`; }
+  else if(s && s.focus==="rail") h = "En surbrillance : main courante, balustres et poteaux.";
+  $("#hint").textContent = h;
+}
+
+function toggleMark(i){ const s = STEPS[S.cur]; if(!s || !s.tracker) return; const m = marks(s.tracker.key); m[i] = !m[i]; renderAll(); }
+function walkGo(i){ const s = STEPS[S.cur]; if(!s || !s.walk) return; S.pos[s.walk.key] = i; const f = walkArr(s)[i].findIndex(x=>!x); S.sub[s.walk.key] = f<0?0:f; renderAll(); }
+
+document.addEventListener("click", e=>{
+  const t = e.target;
+  const go = t.closest("[data-go]");
+  if(go){ S.cur = +go.dataset.go; preview = false; renderAll(); if(window.innerWidth<=920) $("#stage").scrollIntoView({behavior:"smooth",block:"start"}); return; }
+  const ph = t.closest("[data-phase]");
+  if(ph){ const p = +ph.dataset.phase; const idx = STEPS.findIndex(s=>s.phase===p && !S.done[s.id]); S.cur = idx>=0?idx:STEPS.findIndex(s=>s.phase===p); preview = false; renderAll(); return; }
+  const act = t.closest("[data-act]");
+  if(act){ if(act.dataset.act==="prev") S.cur = Math.max(0, S.cur-1); else { const s = STEPS[S.cur]; if(s) S.done[s.id] = true; S.cur = Math.min(STEPS.length, S.cur+1); } preview = false; renderAll(); return; }
+  const cell = t.closest("[data-cell]"); if(cell){ toggleMark(+cell.dataset.cell); return; }
+  const bulk = t.closest("[data-bulk]");
+  if(bulk){ const s = STEPS[S.cur], m = marks(s.tracker.key), b = bulk.dataset.bulk;
+    for(let i=0;i<N;i++) m[i] = b==="all" ? true : b==="none" ? false : (i%2===0 ? true : m[i]); renderAll(); return; }
+  const s = STEPS[S.cur];
+  if(s && s.walk){
+    const k = s.walk.key, i = curPos(s), a = walkArr(s)[i];
+    const sel = t.closest("[data-sub]"); if(sel){ S.sub[k] = +sel.dataset.sub; preview = false; renderAll(); return; }
+    const ck = t.closest("[data-subck]");
+    if(ck){ const j = +ck.dataset.subck; a[j] = !a[j];
+      if(a[j]){ const f = a.findIndex(x=>!x); S.sub[k] = f<0 ? j : f; } else S.sub[k] = j;
+      renderAll(); return; }
+    if(t.closest("[data-wnext]")){ a.fill(true); const n = walkNext(s, i-1); if(n>=0){ S.pos[k] = n; S.sub[k] = 0; } renderAll(); return; }
+    if(t.closest("[data-wprev]")){ if(i<N-1){ S.pos[k] = i+1; S.sub[k] = 0; } renderAll(); return; }
+    const wg = t.closest("[data-wgo]"); if(wg){ walkGo(+wg.dataset.wgo); return; }
+  }
+});
+document.addEventListener("change", e=>{
+  const c = e.target.closest("[data-ck]"); if(!c) return;
+  const s = STEPS[S.cur]; checks(s.id, s.checks.length)[+c.dataset.ck] = c.checked; save(); if(Scene) Scene.refresh();
+});
+
+function resetUI(confirming){
+  $("#resetZone").innerHTML = confirming
+    ? `<span class="confirm">Effacer toute la progression ?<button class="danger" id="resetYes">Oui, effacer</button><button id="resetNo">Annuler</button></span>`
+    : `<button id="resetBtn">Tout remettre à zéro</button>`;
+}
+$("#resetZone").addEventListener("click", e=>{
+  if(e.target.id==="resetBtn") resetUI(true);
+  else if(e.target.id==="resetNo") resetUI(false);
+  else if(e.target.id==="resetYes"){ const v = S.view; S = blank(); S.view = v; resetUI(false); renderAll(); }
+});
+
+/* ---------- scène 3D ---------- */
+const Scene = (function(){
+  if(!window.THREE || !THREE.OrbitControls){ $("#glFallback").hidden = false; return null; }
+  const canvas = $("#gl"), stage = $("#stage");
+  let renderer;
+  try{ renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true}); }catch(e){ $("#glFallback").hidden = false; return null; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(36, 1, .03, 100);
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true; controls.dampingFactor = .08;
+  controls.maxPolarAngle = Math.PI*.495; controls.minDistance = .6; controls.maxDistance = 20;
+
+  scene.add(new THREE.HemisphereLight(0xfdf6ec, 0x5e5649, .62));
+  const sun = new THREE.DirectionalLight(0xfff0d8, .95);
+  sun.position.set(4, 11, 7); sun.castShadow = true; sun.shadow.mapSize.set(2048,2048);
+  Object.assign(sun.shadow.camera, {left:-7,right:7,top:7,bottom:-7,near:1,far:30}); sun.shadow.bias = -0.0006;
+  sun.target.position.set(-2.2, 2.5, -1.1); scene.add(sun, sun.target);
+  const fill = new THREE.DirectionalLight(0xdfe8ff, .28); fill.position.set(-6, 4, 5); scene.add(fill);
+
+  function woodTex(seed){
+    const c = document.createElement("canvas"); c.width = 512; c.height = 256; const g = c.getContext("2d");
+    g.fillStyle = "#ffffff"; g.fillRect(0,0,512,256);
+    let r = seed; const rnd = () => (r = (r*9301+49297)%233280)/233280;
+    for(let k=0;k<55;k++){
+      const y0 = rnd()*256, a = .03 + rnd()*.10;
+      g.strokeStyle = `rgba(70,40,18,${a})`; g.lineWidth = .8 + rnd()*2.6; g.beginPath();
+      for(let x=0;x<=512;x+=8){ const y = y0 + Math.sin(x*.011 + k)*5 + Math.sin(x*.047 + k*3)*1.4; x?g.lineTo(x,y):g.moveTo(x,y); }
+      g.stroke();
+    }
+    for(let k=0;k<3;k++){ const cx = rnd()*512, cy = rnd()*256; g.strokeStyle = "rgba(70,40,18,.12)"; for(let q=1;q<6;q++){ g.beginPath(); g.ellipse(cx,cy,q*7,q*2.2,0,0,Math.PI*2); g.stroke(); } }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1); return t;
+  }
+  const texA = woodTex(7), texB = woodTex(31);
+  texB.repeat.set(1.6, 1.6);
+
+  const H = .18, G = .25, W = .86, T = .042, NOSE = .028, RH = .9, LAND = 1.1;
+  const V = (x,z)=>({x,z}), add2 = (a,b)=>V(a.x+b.x,a.z+b.z), sub2 = (a,b)=>V(a.x-b.x,a.z-b.z), mul = (a,k)=>V(a.x*k,a.z*k);
+  const leftOf = d => V(d.z, -d.x), len2 = a => Math.hypot(a.x,a.z), norm = a => mul(a, 1/(len2(a)||1));
+  const plan = [], rail = []; let landingQuad = null;
+  let C = V(0,0), d = V(0,-1);
+  function straight(n){
+    for(let k=0;k<n;k++){
+      const l = leftOf(d), A = add2(C,mul(l,W/2)), B = sub2(C,mul(l,W/2)), A2 = add2(A,mul(d,G)), B2 = add2(B,mul(d,G));
+      plan.push({poly:[A,B,B2,A2], front:[A,B], back:[A2,B2], d, side:mul(l,-1)});
+      rail.push({p:sub2(mul(add2(A,A2),.5), mul(l,.04)), i:plan.length-1, bal:true});
+      C = add2(C,mul(d,G));
+    }
+  }
+  function windersLeft(n){
+    const l = leftOf(d), P = add2(C,mul(l,W/2)), B = sub2(C,mul(l,W/2)), corner = add2(B,mul(d,W));
+    const q = th => { const dir = add2(mul(l,-Math.cos(th)), mul(d,Math.sin(th))); const t = th <= Math.PI/4 ? W/Math.cos(th) : W/Math.sin(th); return add2(P, mul(dir,t)); };
+    const first = plan.length;
+    for(let k=0;k<n;k++){
+      const t1 = k/n*Math.PI/2, t2 = (k+1)/n*Math.PI/2, Q1 = q(t1), Q2 = q(t2);
+      const poly = (t1 < Math.PI/4 && t2 > Math.PI/4) ? [P,Q1,corner,Q2] : [P,Q1,Q2];
+      const mid = (t1+t2)/2, walk = norm(add2(mul(l,Math.sin(mid)), mul(d,Math.cos(mid))));
+      plan.push({poly, front:[P,Q1], back:[P,Q2], d:walk, side:norm(add2(mul(l,-Math.cos(mid)), mul(d,Math.sin(mid)))), winder:true});
+    }
+    rail.push({p:add2(add2(P,mul(l,-.04)),mul(d,.04)), i:first + Math.floor(n/2), newel:true, base:0});
+    C = add2(P, mul(d, W/2)); d = l;
+  }
+  function landing(L){
+    const l = leftOf(d), A = add2(C,mul(l,W/2)), B = sub2(C,mul(l,W/2));
+    landingQuad = {poly:[A,B,add2(B,mul(d,L)),add2(A,mul(d,L))], front:[A,B]};
+    rail.push({p:sub2(A,mul(l,.04)), y:16*H + RH, newel:true});
+    rail.push({p:sub2(add2(A,mul(d,L)),mul(l,.04)), y:16*H + RH, newel:true});
+    C = add2(C,mul(d,L));
+  }
+  const startA = V(-W/2 + .04, .02);
+  straight(6); windersLeft(4); straight(5); landing(LAND); straight(5); windersLeft(4); straight(6);
+  const topY = i => (i < 15 ? i+1 : i+2) * H;
+  rail.forEach(r => { if(r.i !== undefined) r.y = topY(r.i) + RH; });
+  const last = plan[N-1];
+  rail.unshift({p:startA, y:RH + .08, newel:true, base:0});
+  rail.push({p:sub2(last.back[0], mul(leftOf(last.d), .04)), y:topY(N-1) + RH, newel:true});
+
+  const treads = [], plates = [], risers = [], corners = [], railParts = [], pickables = [];
+  const stairs = new THREE.Group(); scene.add(stairs);
+  function woodMat(tex){ return new THREE.MeshStandardMaterial({color:LEVELS[0].c, roughness:LEVELS[0].r, metalness:0, map:tex}); }
+  function add(mesh, parent){ mesh.castShadow = true; mesh.receiveShadow = true; (parent||stairs).add(mesh); return mesh; }
+  const centroid = poly => mul(poly.reduce((s,p)=>add2(s,p), V(0,0)), 1/poly.length);
+  function outward(e1, e2, c){ const e = sub2(e2,e1); let n = norm(V(e.z, -e.x)); const m = mul(add2(e1,e2),.5); if((m.x-c.x)*n.x + (m.z-c.z)*n.z < 0) n = mul(n,-1); return n; }
+
+  function slab(poly, frontIdx, top, mat, nose){
+    const c = centroid(poly), pts = poly.map(p=>V(p.x,p.z));
+    if(nose){ const n = outward(poly[frontIdx[0]], poly[frontIdx[1]], c); frontIdx.forEach(k => pts[k] = add2(pts[k], mul(n,NOSE))); }
+    const shape = new THREE.Shape(pts.map(p=>new THREE.Vector2(p.x,p.z)));
+    const geo = new THREE.ExtrudeGeometry(shape, {depth:T, bevelEnabled:true, bevelThickness:.004, bevelSize:.004, bevelSegments:1});
+    geo.rotateX(Math.PI/2);
+    const m = add(new THREE.Mesh(geo, mat)); m.position.y = top; return m;
+  }
+  function vpanel(e1, e2, y0, h, th, mat, inward){
+    const e = sub2(e2,e1), L = len2(e), m = mul(add2(e1,e2),.5);
+    const mesh = add(new THREE.Mesh(new THREE.BoxGeometry(L, h, th), mat));
+    mesh.rotation.y = Math.atan2(-e.z, e.x);
+    const p = inward ? add2(m, mul(inward, th/2)) : m;
+    mesh.position.set(p.x, y0 + h/2, p.z); return mesh;
+  }
+
+  plan.forEach((s,i)=>{
+    const top = topY(i), c = centroid(s.poly);
+    s.c = c; s.top = top; s.nOut = outward(s.front[0], s.front[1], c);
+    const tr = slab(s.poly, [0,1], top, woodMat(texA), true);
+    tr.userData = {kind:"tread", i}; treads.push(tr); pickables.push(tr);
+    const k = s.winder ? .72 : .8;
+    const inner = s.poly.map(p => add2(c, mul(sub2(p,c), k)));
+    const pg = new THREE.ShapeGeometry(new THREE.Shape(inner.map(p=>new THREE.Vector2(p.x,p.z))));
+    pg.rotateX(Math.PI/2);
+    const pm = woodMat(texA); pm.polygonOffset = true; pm.polygonOffsetFactor = -2; pm.polygonOffsetUnits = -2; pm.side = THREE.DoubleSide;
+    const plate = new THREE.Mesh(pg, pm); plate.position.y = top + .0012; plate.receiveShadow = true; stairs.add(plate);
+    plate.userData = {kind:"tread", i}; plates.push(plate); pickables.push(plate);
+    const rs = vpanel(s.front[0], s.front[1], top - H, H - T, .022, woodMat(texB), mul(s.nOut,-1));
+    rs.userData = {kind:"riser", i}; risers.push(rs); pickables.push(rs);
+    const b1 = s.back[0], b2 = s.back[1], bm = mul(add2(b1,b2),.5), inw = norm(sub2(c,bm)), e = sub2(b2,b1);
+    s.backMid = bm; s.inw = inw;
+    const cm = new THREE.Mesh(new THREE.BoxGeometry(len2(e)*.94, .018, .018), new THREE.MeshBasicMaterial({color:0xF2A63A, transparent:true, opacity:0}));
+    const cp = add2(bm, mul(inw,.014)); cm.position.set(cp.x, top + .01, cp.z); cm.rotation.y = Math.atan2(-e.z, e.x);
+    stairs.add(cm); corners.push(cm);
+  });
+
+  const floorWood = new THREE.MeshStandardMaterial({color:"#7d644c", roughness:.5, map:texB});
+  slab(landingQuad.poly, [0,1], 16*H, floorWood, false);
+  const landRiser = vpanel(landingQuad.front[0], landingQuad.front[1], 15*H, H - T, .022, woodMat(texB), mul(outward(landingQuad.front[0], landingQuad.front[1], centroid(landingQuad.poly)),-1));
+
+  function bar(a, b, r, mat){
+    const v = new THREE.Vector3().subVectors(b,a), L = v.length();
+    const m = add(new THREE.Mesh(new THREE.BoxGeometry(r*2, L, r*2), mat));
+    m.position.copy(a).addScaledVector(v, .5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), v.clone().normalize());
+    return m;
+  }
+  const railMat = () => new THREE.MeshStandardMaterial({color:WHITE[0].c, roughness:WHITE[0].r, map:texB});
+  const v3 = (p,y) => new THREE.Vector3(p.x, y, p.z);
+  for(let k=0;k<rail.length-1;k++){ const a = rail[k], b = rail[k+1]; railParts.push(bar(v3(a.p,a.y), v3(b.p,b.y), .03, railMat())); }
+  rail.forEach(r=>{
+    if(r.bal) railParts.push(bar(v3(r.p, topY(r.i)), v3(r.p, r.y), .017, railMat()));
+    if(r.newel){
+      const y0 = r.base === 0 ? 0 : r.y - RH - .5;
+      const m = add(new THREE.Mesh(new THREE.BoxGeometry(.1, r.y - y0 + .12, .1), railMat()));
+      m.position.set(r.p.x, (y0 + r.y + .12)/2, r.p.z); railParts.push(m);
+      const cap = add(new THREE.Mesh(new THREE.BoxGeometry(.13, .04, .13), railMat())); cap.position.set(r.p.x, r.y + .14, r.p.z); railParts.push(cap);
+    }
+  });
+
+  const xs = [], zs = []; plan.forEach(s=>s.poly.forEach(p=>{ xs.push(p.x); zs.push(p.z); }));
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs);
+  const wallMat = new THREE.MeshStandardMaterial({color:"#dadfd8", roughness:.95});
+  const wallH = 32*H + 1.2;
+  const wBack = new THREE.Mesh(new THREE.BoxGeometry(maxX - minX + .4, wallH, .08), wallMat); wBack.position.set((minX+maxX)/2 - .1, wallH/2, minZ - .05); wBack.receiveShadow = true; scene.add(wBack);
+  const wLeft = new THREE.Mesh(new THREE.BoxGeometry(.08, wallH, maxZ - minZ + .3), wallMat); wLeft.position.set(minX - .05, wallH/2, (minZ+maxZ)/2 + .05); wLeft.receiveShadow = true; scene.add(wLeft);
+  const floorMat = new THREE.MeshStandardMaterial({color:"#c9cfc7", roughness:1});
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 14), floorMat); floor.rotation.x = -Math.PI/2; floor.position.set((minX+maxX)/2, 0, (minZ+maxZ)/2 + 2); floor.receiveShadow = true; scene.add(floor);
+
+  function label(text, x, y, z){
+    const c = document.createElement("canvas"), g = c.getContext("2d"), f = '700 40px "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif';
+    g.font = f; const w = Math.ceil(g.measureText(text).width) + 44; c.width = w; c.height = 68;
+    g.font = f; g.fillStyle = "rgba(23,32,27,.88)"; const r = 22;
+    g.beginPath(); g.moveTo(r,0); g.lineTo(w-r,0); g.quadraticCurveTo(w,0,w,r); g.lineTo(w,68-r); g.quadraticCurveTo(w,68,w-r,68); g.lineTo(r,68); g.quadraticCurveTo(0,68,0,68-r); g.lineTo(0,r); g.quadraticCurveTo(0,0,r,0); g.fill();
+    g.fillStyle = "#ffffff"; g.textBaseline = "middle"; g.fillText(text, 22, 36);
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c), depthTest:false, transparent:true}));
+    const hgt = .2; s.scale.set(hgt * w/68, hgt, 1); s.position.set(x, y, z); s.renderOrder = 10; scene.add(s); return s;
+  }
+  const lc = centroid(landingQuad.poly);
+  const makeLabels = () => {
+    label("RDC · marche 1", plan[0].c.x + .2, .55, plan[0].c.z + .5);
+    label("1er étage", lc.x, 16*H + .45, lc.z);
+    label("Combles · marche 30", plan[N-1].c.x, topY(N-1) + .55, plan[N-1].c.z);
+  };
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(makeLabels, makeLabels);
+
+  /* outils animés */
+  const black = new THREE.MeshStandardMaterial({color:"#1d1f1e", roughness:.55});
+  const yellow = new THREE.MeshStandardMaterial({color:"#E8B21E", roughness:.45});
+  const red = new THREE.MeshStandardMaterial({color:"#B8352A", roughness:.9});
+  const sander = new THREE.Group(), sInner = new THREE.Group(); sander.add(sInner);
+  (()=>{ const pad = new THREE.Mesh(new THREE.CylinderGeometry(.0625,.0625,.014,32), red); pad.position.y = .007;
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(.066,.07,.03,32), black); base.position.y = .029;
+    const body = new THREE.Mesh(new THREE.SphereGeometry(.062,28,18,0,Math.PI*2,0,Math.PI/2), yellow); body.position.y = .044;
+    const knob = new THREE.Mesh(new THREE.CylinderGeometry(.018,.022,.03,16), black); knob.position.y = .118;
+    const port = new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,.07,12), black); port.rotation.z = Math.PI/2; port.position.set(.085,.03,0);
+    sInner.add(pad, base, body, knob, port); })();
+  const delta = new THREE.Group(), dInner = new THREE.Group(); delta.add(dInner);
+  (()=>{ const sh = new THREE.Shape(); sh.moveTo(0,.075); sh.lineTo(-.052,-.04); sh.quadraticCurveTo(0,-.058,.052,-.04); sh.lineTo(0,.075);
+    const pg = new THREE.ExtrudeGeometry(sh,{depth:.012, bevelEnabled:false}); pg.rotateX(-Math.PI/2);
+    const pad = new THREE.Mesh(pg, red);
+    const bg = new THREE.ExtrudeGeometry(sh,{depth:.035, bevelEnabled:true, bevelThickness:.006, bevelSize:.006, bevelSegments:2}); bg.rotateX(-Math.PI/2); bg.scale(.88,1,.88);
+    const body = new THREE.Mesh(bg, yellow); body.position.y = .014;
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(.03,.035,.11), black); handle.position.set(0,.075,.012);
+    dInner.add(pad, body, handle); })();
+  const block = new THREE.Group();
+  (()=>{ const foam = new THREE.Mesh(new THREE.BoxGeometry(.11,.035,.065), new THREE.MeshStandardMaterial({color:"#3a7bd5", roughness:.8}));
+    foam.position.y = .025; const paper = new THREE.Mesh(new THREE.BoxGeometry(.112,.008,.067), red); paper.position.y = .004; block.add(foam, paper); })();
+  const roller = new THREE.Group(), drum = new THREE.Group(); roller.add(drum);
+  const paintDrum = new THREE.MeshStandardMaterial({color:"#f4f2ec", roughness:.95});
+  const drumCyl = new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.11,20), paintDrum); drum.add(drumCyl);
+  (()=>{ const arm = new THREE.Mesh(new THREE.CylinderGeometry(.004,.004,.08,8), black); arm.position.set(0,.065,.02); arm.rotation.x = .5; drum.add(arm);
+    const grip = new THREE.Mesh(new THREE.CylinderGeometry(.011,.011,.12,12), new THREE.MeshStandardMaterial({color:"#C24A2B", roughness:.6}));
+    grip.position.set(0,.14,.07); grip.rotation.x = .5; drum.add(grip); })();
+  [sander, delta, block, roller].forEach(g=>{ g.traverse(o=>{ if(o.isMesh) o.castShadow = true; }); g.visible = false; scene.add(g); });
+  let toolFn = null;
+
+  const lerpV = (a,b,u) => V(a.x+(b.x-a.x)*u, a.z+(b.z-a.z)*u);
+  function setTool(anim, i){
+    [sander, delta, block, roller].forEach(g=>g.visible = false); toolFn = null;
+    if(!anim || i<0) return;
+    const p = plan[i];
+    if(anim === "tread"){
+      const c = p.winder ? add2(p.c, mul(norm(sub2(p.c, p.poly[0])), .07)) : p.c, range = p.winder ? .1 : .22;
+      sander.visible = true; sander.quaternion.identity();
+      toolFn = t => { const sw = reduce?0:Math.cos(t*1.3)*range, sd = reduce?0:Math.sin(t*3)*.03;
+        sander.position.set(c.x + p.side.x*sw + p.d.x*sd, p.top + .002, c.z + p.side.z*sw + p.d.z*sd);
+        sInner.rotation.y = reduce?0:t*.8; sInner.position.y = reduce?0:Math.abs(Math.sin(t*38))*.0015; };
+    } else if(anim === "riser"){
+      const f = mul(add2(p.front[0], p.front[1]), .5), e = norm(sub2(p.front[1], p.front[0])), range = Math.max(.03, Math.min(.25, len2(sub2(p.front[1], p.front[0]))/2 - .08));
+      sander.visible = true; sander.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), new THREE.Vector3(p.nOut.x, 0, p.nOut.z));
+      const y = p.top - H + (H - T)/2;
+      toolFn = t => { const sw = reduce?0:Math.cos(t*1.3)*range; sander.position.set(f.x + e.x*sw + p.nOut.x*.002, y + (reduce?0:Math.sin(t*2.6)*.012), f.z + e.z*sw + p.nOut.z*.002);
+        sInner.rotation.y = reduce?0:t*.8; sInner.position.y = reduce?0:Math.abs(Math.sin(t*38))*.0015; };
+    } else if(anim === "corner"){
+      delta.visible = true;
+      const b0 = p.back[0], b1 = p.back[1], v = norm(sub2(p.backMid, p.c));
+      delta.rotation.set(0, Math.atan2(-v.x, -v.z), 0);
+      toolFn = t => { const u = reduce ? .5 : .5 + .42*Math.sin(t*.9); const q = add2(lerpV(b0,b1, p.winder ? .15 + .7*u : u), mul(p.inw, .06));
+        delta.position.set(q.x, p.top + .002, q.z); dInner.position.x = reduce?0:Math.sin(t*45)*.0015; };
+    } else if(anim === "nose"){
+      block.visible = true;
+      const e = sub2(p.front[1], p.front[0]), phi = Math.atan2(-e.z, e.x);
+      const lz = V(Math.sin(phi), Math.cos(phi)), sgn = (lz.x*p.nOut.x + lz.z*p.nOut.z) >= 0 ? 1 : -1;
+      block.rotation.order = "YXZ"; block.rotation.set(sgn*Math.PI/4, phi, 0);
+      toolFn = t => { const u = reduce ? .5 : .5 + .4*Math.sin(t*1.6); const q = add2(lerpV(p.front[0], p.front[1], p.winder ? .25 + .7*u : u), mul(p.nOut, NOSE*.7));
+        block.position.set(q.x, p.top - .012, q.z); };
+    } else if(anim === "rollRiser"){
+      roller.visible = true; drum.rotation.set(0,0,0); paintDrum.color.set("#f4f2ec");
+      const f = mul(add2(p.front[0], p.front[1]), .5), e = norm(sub2(p.front[1], p.front[0])), range = Math.max(.03, Math.min(.28, len2(sub2(p.front[1], p.front[0]))/2 - .08));
+      roller.rotation.set(0, Math.atan2(p.nOut.x, p.nOut.z), 0);
+      const y = p.top - H + (H - T)/2;
+      toolFn = t => { const sw = reduce?0:Math.sin(t*1.5)*range; roller.position.set(f.x + e.x*sw + p.nOut.x*.03, y, f.z + e.z*sw + p.nOut.z*.03); drumCyl.rotation.y = sw*20; };
+    } else if(anim === "rollTread"){
+      roller.visible = true; paintDrum.color.set("#e9c48f");
+      roller.rotation.set(0, Math.atan2(-p.side.z, p.side.x), 0); drum.rotation.set(0, 0, Math.PI/2);
+      const c = p.c, range = p.winder ? .1 : .25;
+      toolFn = t => { const sw = reduce?0:Math.sin(t*1.4)*range; roller.position.set(c.x + p.side.x*sw, p.top + .026, c.z + p.side.z*sw); };
+    }
+  }
+
+  function cssColor(name, fb){ const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v || fb; }
+  function syncTheme(){ wallMat.color.set(cssColor("--wall", "#dadfd8")); floorMat.color.set(cssColor("--floor", "#c9cfc7")); }
+  syncTheme();
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncTheme);
+  new MutationObserver(syncTheme).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
+
+  const OVER_T = new THREE.Vector3((minX+maxX)/2, 2.5, (minZ+maxZ)/2), OVER_C = OVER_T.clone().add(new THREE.Vector3(5.6, 4.6, 6.8));
+  let tween = null;
+  function flyTo(target, camPos){ tween = {t:0, ft:controls.target.clone(), fc:camera.position.clone(), tt:target.clone(), tc:camPos.clone()}; }
+  function aspectBoost(){ return camera.aspect < .9 ? 1.55 : camera.aspect < 1.2 ? 1.22 : 1; }
+  function overview(){ const k = aspectBoost(); flyTo(OVER_T, OVER_T.clone().add(OVER_C.clone().sub(OVER_T).multiplyScalar(k))); }
+  function focusTread(i, close, low){
+    const s = plan[i], t = new THREE.Vector3(s.c.x, s.top - (low ? H*.5 : 0), s.c.z);
+    const dir = norm(add2(mul(s.d,-1), V(.55,.7))), k = aspectBoost(), dist = (close ? 1.25 : 2.4)*k, hgt = (close ? (low ? .55 : .95) : 1.7)*k;
+    flyTo(t, t.clone().add(new THREE.Vector3(dir.x*dist, hgt, dir.z*dist)));
+  }
+  camera.position.copy(OVER_C); controls.target.copy(OVER_T);
+
+  function applyWood(mesh, lv){ const L = LEVELS[lv]; mesh.material.color.set(L.c); mesh.material.roughness = L.r; }
+  function applyWhite(mesh, lv){ const L = WHITE[lv]; mesh.material.color.set(L.c); mesh.material.roughness = L.r;
+    const want = L.map ? texB : null; if(mesh.material.map !== want){ mesh.material.map = want; mesh.material.needsUpdate = true; } }
+
+  let camKey = "", focusIdx = -1, focusAnim = null;
+  function refresh(){
+    const s = STEPS[S.cur];
+    for(let i=0;i<N;i++){
+      applyWood(treads[i], preview ? 5 : edgeLevel(i));
+      applyWood(plates[i], preview ? 5 : plateauLevel(i));
+      applyWhite(risers[i], preview ? 3 : riserLevel(i));
+    }
+    applyWhite(landRiser, preview ? 3 : riserLevel(14));
+    const rl = preview ? 3 : railLevel(); railParts.forEach(m=>applyWhite(m, rl));
+
+    let anim = null, idx = -1, close = false, low = false;
+    if(!preview && s){
+      if(s.walk){ if(walkCount(s) < N){ idx = curPos(s); anim = s.walk.subs[activeSub(s)].anim; close = true; low = anim === "riser"; } }
+      else if(s.tracker){ idx = nextIndex(s.tracker.key); if(idx >= 0){ anim = s.tracker.part === "risers" ? "rollRiser" : "rollTread"; close = true; low = s.tracker.part === "risers"; } }
+    }
+    setTool(anim, idx); focusIdx = idx; focusAnim = anim;
+    const key = [S.cur, idx, low, S.view, preview].join("|");
+    if(key !== camKey){ camKey = key;
+      if(S.view === "all" || preview || !s) overview();
+      else if(idx >= 0) focusTread(idx, close, low);
+      else if(s.focus === "rail") focusTread(7, false, false);
+      else overview();
+    }
+    $("#vAll").setAttribute("aria-pressed", S.view==="all" && !preview); $("#vFocus").setAttribute("aria-pressed", S.view!=="all" && !preview);
+    $("#vFinal").setAttribute("aria-pressed", preview);
+  }
+
+  $("#vAll").addEventListener("click", ()=>{ S.view = "all"; preview = false; save(); refresh(); updateStageText(); });
+  $("#vFocus").addEventListener("click", ()=>{ S.view = "focus"; preview = false; save(); camKey = ""; refresh(); updateStageText(); });
+  $("#vFinal").addEventListener("click", ()=>{ preview = !preview; camKey = ""; refresh(); updateStageText(); });
+
+  const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+  let hovered = null, downAt = null;
+  function pick(ev){
+    const r = canvas.getBoundingClientRect();
+    ptr.set(((ev.clientX - r.left)/r.width)*2 - 1, -((ev.clientY - r.top)/r.height)*2 + 1);
+    ray.setFromCamera(ptr, camera);
+    const hit = ray.intersectObjects(pickables, false)[0];
+    return hit ? hit.object : null;
+  }
+  function allowed(obj){
+    const s = STEPS[S.cur]; if(preview || !s || !obj) return false;
+    if(s.walk) return true;
+    if(!s.tracker) return false;
+    const part = s.tracker.part; return part==="both" || (part==="treads" && obj.userData.kind==="tread") || (part==="risers" && obj.userData.kind==="riser");
+  }
+  canvas.addEventListener("pointermove", ev=>{ const o = pick(ev); hovered = allowed(o) ? o.userData : null; canvas.style.cursor = hovered ? "pointer" : "grab"; });
+  canvas.addEventListener("pointerleave", ()=>{ hovered = null; });
+  canvas.addEventListener("pointerdown", ev=>{ downAt = {x:ev.clientX, y:ev.clientY}; });
+  canvas.addEventListener("pointerup", ev=>{
+    if(!downAt) return; const moved = Math.hypot(ev.clientX-downAt.x, ev.clientY-downAt.y); downAt = null;
+    if(moved > 6) return;
+    const o = pick(ev); if(!allowed(o)) return;
+    const s = STEPS[S.cur]; if(s.walk) walkGo(o.userData.i); else toggleMark(o.userData.i);
+  });
+  controls.addEventListener("start", ()=>{ tween = null; });
+
+  function resize(){ const w = stage.clientWidth, h = stage.clientHeight; if(!w||!h) return; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); }
+  new ResizeObserver(()=>{ const was = camera.aspect; resize(); if(Math.abs(was - camera.aspect) > .25){ camKey = ""; refresh(); } }).observe(stage); resize();
+
+  const clock = new THREE.Clock();
+  const ease = t => t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
+  const glow = (mat, e) => mat.emissive.setRGB(e*.95, e*.6, e*.15);
+  function loop(){
+    const dt = Math.min(clock.getDelta(), .05), t = clock.elapsedTime;
+    if(tween){ tween.t = Math.min(1, tween.t + dt/(reduce ? .01 : 1.1)); const k = ease(tween.t);
+      controls.target.lerpVectors(tween.ft, tween.tt, k); camera.position.lerpVectors(tween.fc, tween.tc, k); if(tween.t>=1) tween = null; }
+    controls.update();
+    if(toolFn) toolFn(t);
+    const s = STEPS[S.cur], pulse = reduce ? .6 : .5 + .5*Math.sin(t*3.2);
+    for(let i=0;i<N;i++){
+      let et = 0, er = 0;
+      if(i === focusIdx && !preview){ if(focusAnim === "riser" || focusAnim === "rollRiser") er = .14*pulse; else if(focusAnim) et = .12*pulse; }
+      if(hovered && hovered.i === i){ if(hovered.kind === "riser") er = .3; else et = .3; }
+      glow(treads[i].material, et); glow(plates[i].material, et); glow(risers[i].material, er);
+      corners[i].material.opacity = (i === focusIdx && focusAnim === "corner") ? .3 + .6*pulse : 0;
+    }
+    const railOn = !preview && s && s.focus === "rail";
+    railParts.forEach(m=>glow(m.material, railOn ? .22*pulse : 0));
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+  return {refresh, isWinder: i => !!plan[i].winder};
+})();
+
+renderAll();
+})();
+</script>
+
+<script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
+</body>
+</html>
